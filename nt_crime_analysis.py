@@ -102,3 +102,109 @@ print("\nAlcohol involvement values:")
 print(df["Alcohol involvement"].unique())
 
 print("\nData cleaning complete!")
+
+
+#================= STEP-4 EXPLORE THE DATA ==================
+
+print("\n" + "="*55)
+print("EXPLORATION RESULTS")
+print("="*55)
+
+total = df["Number of offences"].sum()
+print(f"\nTotal number of offences recorded: {total:,}")
+
+#----------- Group by Date (monthly totals) ----------------
+monthly_totals = df.groupby("Date")["Number of offences"].sum().reset_index()
+print(type(monthly_totals))
+print(f"\nMonthly totals table ({len(monthly_totals)} months):")
+print(monthly_totals.head(5))
+
+#------ MEAN AVERAGE ------------
+# WHAT DOES THIS MEAN AS AN INSIGHT?
+# If mean = 2,900 → on average, NT records ~2,900 crimes per month
+
+mean_val = monthly_totals["Number of offences"].mean()
+print(f"\nMean average offenece per month recorded: {mean_val:.0f}")
+print(f"\nEvery month on average, NT records about {mean_val:.0f}")
+
+#-------------------- MEDIAN CALCULATION ---------------------
+#.median() finds the MIDDLE value when all months sorted low to high
+# Example with 5 months: 1800, 2600, 2900, 3100, 5200
+# Sorted: 1800  2600  [2900]  3100  5200 median = 2900
+
+median_val = monthly_totals["Number of offences"].median()
+
+# WHY MEDIAN MATTERS:
+# Mean is pulled up by extreme months (e.g. a riot month with 6000 crimes)
+# Median ignores those extremes and shows the "typical" month
+# If mean (3200) >> median (2700) → a few months had extreme crime spikes
+# If mean ≈ median → crime is fairly stable across all months
+
+print(f"\nMedian offeneces per months: {median_val:.0f}")
+
+difference = mean_val - median_val 
+if difference > 200:
+    print(f"\nMean is {difference:.0f} higher than median.")
+    print(f"\nSome months had unusually HIGH crime recorded.")
+else:
+    print(f"\nMean and median are close which mean crime is fairly consistent")
+
+
+#-------------------- MAX AND MIN --------------------------
+#.max() and .min() finds the highest and lowest value in the columns
+
+max_offeneces = monthly_totals["Number of offences"].max()
+min_offeneces = monthly_totals["Number of offences"].min()
+
+#.idxmax() and .idxmin() finds the highest and lowest index in the rows
+
+max_idx = monthly_totals["Number of offences"].idxmax()
+min_idx = monthly_totals["Number of offences"].idxmin()
+
+# Get the max and min value as DATE from monthly_totals location
+max_date = monthly_totals.loc[max_idx,"Date"]
+min_date = monthly_totals.loc[min_idx, "Date"]
+
+#INSIGHT:
+# Max month -> when was crime at its absolute worst? why?
+# Min month -> when was crime lowest? What was happening then ?
+
+print(f"\nMaximun number of offeneces is recorded as: {max_offeneces} in the month of: {max_date.strftime("%B %Y")}")
+print(f"\nMinimun number of the offences is recorded as: {min_offeneces} in the month of: {min_date.strftime("%B %Y")}")
+
+#------------------- BY REGION -----------------------------
+
+region_totals = df.groupby("Reporting Region")["Number of offences"].sum().sort_values(ascending=False).reset_index()
+#print(f"\nThe number of offences according to the region are: \n{region_totals}")
+
+region_totals["Percentage"] = (region_totals["Number of offences"] / total * 100).round(1)
+print(f"\nThe number of offences according to the REGION are: \n{region_totals}")
+
+
+#------------------BY CRIME TYPE-------------------------
+crime_totals = df.groupby("Crime Type")["Number of offences"].sum().sort_values(ascending=False).reset_index()
+crime_totals["Precentage"] = (crime_totals["Number of offences"] / total * 100).round(1)
+print(f"\nThe number of offences according to the CRIME TYPE are: \n{region_totals}")
+
+#--------------- DV AND ALCOHOL------------------------------
+dv_df = df[df["DV involvement"] == "Yes"]
+alc_df = df[df["Alcohol involvement"] == 'Yes']
+
+dv_count = dv_df["Number of offences"].sum()
+alc_count = alc_df["Number of offences"].sum()
+
+print(f"\nDV offences recorded as: {dv_count:,} and the DV_percentage is: {dv_count/total * 100:.1f}% of all crime.")
+print(f"\nAlcohol offences recorded as: {alc_count:,} and the Alc_percantage is: {alc_count/total *100:.1f}% of all crime.")
+
+#----------------------- Year over year -------------------
+yearly = df[df["Year"].isin([2024,2025])].groupby("Year")["Number of offences"].sum()
+yearly_crime_rate = ((yearly[2025] - yearly[2024])/ yearly[2024]) * 100
+
+print(f"\nTotal 2024 offences recorded as : {yearly[2024]}")
+print(f"\nTotal 2025 offences recorded as : {yearly[2025]}")
+print(f"\nYearly crime rate = {yearly_crime_rate:.1f}%")
+
+if yearly_crime_rate < 0:
+    print("Good: Crime rate has decreased from 2024 to 2025")
+else:
+    print("Concerning: Crime increased from 2024 to 2025")
