@@ -265,3 +265,115 @@ else:
     print("WEAK model -> treat prediction as rough estimates")
 
 
+#======================= Make future prediction =====================
+
+
+future_t = np.arange(
+    len(train_df),
+    len(train_df) + 10
+).reshape(-1, 1)
+
+print(f"\nPredicting for t value: {future_t.flatten()}")
+
+future_preds = model.predict(future_t)
+future_preds = np.clip(future_preds, 0, None).astype(int)
+
+# Create date labels for the future months
+future_dates = pd.date_range("2026-03-01", periods=10, freq="MS")
+
+month_names = {
+    1:"Jan", 2:"Feb", 3:"Mar", 4:"Apr", 5:"May", 6:"Jun",
+    7:"Jul", 8:"Aug", 9:"Sep", 10:"Oct", 11:"Nov", 12:"Dec"
+}
+
+# Build a clean predictions table
+predictions_df = pd.DataFrame({
+    "Date"               : future_dates,
+    "Year"               : future_dates.year,
+    "Month Name"         : [month_names[m] for m in future_dates.month],
+    "Predicted Offences" : future_preds,
+    "Type"               : "Predicted",
+})
+
+print("\nPredictions for Mar-Dec 2026:")
+print(predictions_df[["Month Name","Year","Predicted Offences"]].to_string(index=False))
+print(f"\nTotal predicted Mar-Dec 2026: ~{future_preds.sum():,} offences")
+
+# ============================================================
+# STEP 6 — SAVE 3 FILES FOR POWER BI
+# ============================================================
+# Goal: Export 3 clean CSV files that Power BI will import
+#
+# FILE 1: nt_crime_cleaned.csv
+#         → The full cleaned dataset
+#         → Used for: region chart, crime type chart, DV chart,
+#                     alcohol chart, slicers (Year, Region, Crime Type)
+#
+# FILE 2: nt_crime_trend.csv
+#         → Monthly actual totals + future predictions combined
+#         → Used for: the LINE CHART showing trend + forecast
+#
+# FILE 3: nt_crime_predictions.csv
+#         → Predictions only (Mar-Dec 2026)
+#         → Used for: the forecast TABLE in Power BI
+# ============================================================
+
+# ── FILE 1: Full cleaned data ────────────────────────────────
+df.to_csv("nt_crime_cleaned.csv", index=False)
+# index=False means don't save the row numbers (0,1,2,3...)
+# as a column — we don't need them
+print("Saved FILE 1: nt_crime_cleaned.csv")
+
+
+# ── FILE 2: Trend + Predictions combined ─────────────────────
+# First prepare the ACTUAL monthly data in the same format
+# as predictions so we can stack them together
+
+actual_df = train_df[["Date", "Number of offences"]].copy()
+# .copy() makes a separate copy so we don't accidentally
+# change the original train_df table
+
+actual_df = actual_df.rename(
+    columns={"Number of offences": "Predicted Offences"}
+)
+# rename the column to match predictions_df column name
+# so both tables have identical columns for stacking
+
+actual_df["Year"]       = actual_df["Date"].dt.year
+actual_df["Month Name"] = actual_df["Date"].dt.month.map(month_names)
+actual_df["Type"]       = "Actual"
+# We label actual months as "Actual"
+# and predicted months as "Predicted"
+# Power BI uses this "Type" column to colour them differently
+
+# Stack actual + predicted into one table using pd.concat
+# pd.concat is like gluing two tables on top of each other
+trend_df = pd.concat(
+    [actual_df, predictions_df[actual_df.columns]],
+    ignore_index=True
+    # ignore_index=True resets row numbers from 0 after stacking
+)
+
+trend_df.to_csv("nt_crime_trend.csv", index=False)
+print("Saved FILE 2: nt_crime_trend.csv")
+print(f"  → {len(actual_df)} actual months + "
+      f"{len(predictions_df)} predicted months")
+
+
+# ── FILE 3: Predictions only ─────────────────────────────────
+predictions_df.to_csv("nt_crime_predictions.csv", index=False)
+print("Saved FILE 3: nt_crime_predictions.csv")
+
+
+# ── Final summary ────────────────────────────────────────────
+print("\n" + "="*55)
+print("ALL DONE — SUMMARY")
+print("="*55)
+print(f"Total offences analysed : {total:,}")
+print(f"DV-related              : {dv_count:,}  ({dv_count/total*100:.1f}%)")
+print(f"Alcohol-related         : {alc_count:,}  ({alc_count/total*100:.1f}%)")
+print(f"2024 → 2025 change      : {yearly_crime_rate:+.1f}%")
+print(f"2026 forecast (Mar-Dec) : ~{future_preds.sum():,} offences")
+print(f"Model R2 score          : {r2:.2f}")
+print("="*55)
+print("\nNow open Power BI and import the 3 CSV files!")
