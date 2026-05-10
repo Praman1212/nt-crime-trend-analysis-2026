@@ -225,3 +225,43 @@ print(train_df)
 train_df["t"] = np.arange(len(train_df))
 print("\nTime column (t) added: ")
 print(train_df[["Date", "t", "Number of offences"]].head(5))
+
+#------------------ INPUT AND OUTPUT -----------------------------
+# X = what we feed INTO the model (the time steps). 2D practice [[]]
+# y = what we want the model to LEARN to predict (offence counts) 1D pratice []
+# The model learns: "when t=0, offences=3291, when t=1, offences=2683..."
+# Then we ask: "when t=24 (March 2026), what do you predict?"
+
+X = train_df[["t"]].values
+y = train_df["Number of offences"].values
+
+print(f"\nX shape: {X.shape} (24 motths, 1 feature)")
+print(f"\n shape: {y.shape} (24 months crime counts)")
+
+# ======= Build and train the model =============================
+
+# make_pipeline chains two steps into one model:
+# Step 1: PolynomialFeatures(degree=2)
+#         Takes t and creates [t, t²]
+#         This allows the model to fit curves not just straight lines
+#         degree=2 means we go up to t-squared (parabola shape)
+# Step 2: LinearRegression
+#         Finds the best curve through all the data points
+#simple say okay haha 
+
+model = make_pipeline(PolynomialFeatures(degree=2), LinearRegression())
+model.fit(X, y)
+print("\nModel trained!")
+
+r2 = model.score(X, y)
+print(f"R2 score: {r2:.2f}")
+print(f" Model explains {r2*100:.0f}% of past monthly crime variation")
+
+if r2 >= 0.7:
+    print("STRONG model -> prediction are reliable")
+elif r2 >= 0.4: 
+    print("MODERATE model -> prediction are resonable estimates")
+else:
+    print("WEAK model -> treat prediction as rough estimates")
+
+
