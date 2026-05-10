@@ -208,3 +208,20 @@ if yearly_crime_rate < 0:
     print("Good: Crime rate has decreased from 2024 to 2025")
 else:
     print("Concerning: Crime increased from 2024 to 2025")
+
+
+#========================== STEP 5 - FUTURE PREDICTION =======================
+#GOAL : Use past monthly crime data to predict future months
+
+print("\n" + "="*55)
+print("PREDICTION")
+print("="*55)
+
+#------------------- Prepare training data ------------------------
+train_df = df[df["Year"].isin([2024, 2025])].groupby("Date")["Number of offences"].sum().reset_index().sort_values("Date")
+print(f"Trainig data: {len(train_df)} months")
+print(train_df)
+
+train_df["t"] = np.arange(len(train_df))
+print("\nTime column (t) added: ")
+print(train_df[["Date", "t", "Number of offences"]].head(5))
